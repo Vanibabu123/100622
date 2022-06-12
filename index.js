@@ -12,7 +12,7 @@ const app = express();
 
 const PORT = 4000;
 
-// middle ware -> Intercept -> converting body to json
+// middle ware -> Intercept1 -> converting body to json
 app.use(express.json()); // Inbuilt middleware
 
 //const MONGO_URL = "mongodb://localhost"; // like phone number
