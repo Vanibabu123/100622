@@ -10,7 +10,7 @@ console.log(process.env.MONGO_URL);
 
 const app = express();
 
-const PORT = 4000;
+const PORT = process.env.PORT;
 
 // middle ware -> Intercept1 -> converting body to json
 app.use(express.json()); // Inbuilt middleware
@@ -76,6 +76,35 @@ app.post("/movies", async function (request, response) {
     console.log(data);
     // db.movies.insertMany(data)
     const result = await client.db("b33wd").collection("movies").insertMany(data);
+    response.send(result);
+});
+
+app.delete("/movies/:id", async function (request, response) {
+    console.log(request.params);
+    // params - parameters
+    const { id } = request.params;
+    // db.movies.deleteOne({id: '102'})
+        
+    const movie = await client
+       .db("b33wd")
+       .collection("movies")
+       .deleteOne({ id });
+        
+    movie.deletedCount > 0
+     ? response.send(movie) 
+     : response.status(404).send({ msg: "No such movie found" });
+});
+
+app.put("/movies/:id", async function (request, response) {
+    const data = request.body;    
+    console.log(data);
+    const { id } = request.params;
+    // db.movies.updateOne({id: id}, {$set: data})
+
+    const result = await client
+      .db("b33wd")
+      .collection("movies")
+      .updateOne({id}, {$set: data});
     response.send(result);
 });
 
