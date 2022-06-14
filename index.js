@@ -2,6 +2,7 @@
 import express from "express";
 import { MongoClient } from "mongodb";
 import dotenv from "dotenv";
+import { usersRouter } from "./routes/users.js";
 
 dotenv.config();
 
@@ -27,85 +28,58 @@ async function createConnection() {
 }
 
 // Top level await
-const client = await createConnection();
+export const client = await createConnection();
 
 // / - home
 app.get("/", function (request, response) {
     response.send("Hello World 🎉🎉😍");
 });
 
-// /movies - Movies
-app.get("/movies", async function (request, response) {
-    //db.movies.find({})
+async function genpassword(password) {
+    const salt = await bcrypt.genSalt(10);
+    const hashPassword = await bcrypt.hash(password, salt);
+    return hashPassword;
+  }
     
-    // Cursor - pagination
-    // toArray - Cursor -> Array
-    const movies = await client
-       .db("b33wd")
-       .collection("movies")
-       .find({})
-       .toArray();
 
-    response.send(movies);
-});
+  app.post("/signup", async function (req, res) {
+    const { username, typeofuser, password } = req.body;
+    const hashPassword = await genpassword(password);
+    const newUser = {
+      username: username,
+      typeofuser: typeofuser,
+      password: hashPassword
+    }
+    const result = await client.db("b33wd").collection("users").insertOne(newUser)
+    res.send(result)
+  
+  })
+  
+  app.post("/signin", async function (req, res) {
+    const { username, typeofuser, password } = req.body;
+    const userDb = await client.db("b33wd").collection("users").findOne({ username: username });
+    if (!userDb) {
+      res.status(401).send("invalid credentials")
+    }
+    else {
+      const storedPass = userDb.password;
+      const isPassMatch = await bcrypt.compare(password, storedPass);
+      if (isPassMatch) {
+        const token = jwt.sign({ id: userDb._id }, process.env.SECRET_KEY);
+        // const token = jwt.sign({ id: userDb._id }, process.env.SECRET_KEY, { expiresIn: "30s" });
+        console.log(token)
+        res.send({ message: "successfully loggen in", token: token })
+      }
+      else {
+        res.status(401).send("invalid credentials")
+        console.log("error")
+      }
+  
+    }
+  
+  
+  })  
 
-app.get("/movies/:id", async function (request, response) {
-    console.log(request.params);
-    // params - parameters
-    const { id } = request.params;
-    // db.movies.findOne({id: '102'})
-
-    //const movie = movies.find((mv) => mv.id === id);
-    //response.send(movie);
-    
-    const movie = await client
-       .db("b33wd")
-       .collection("movies")
-       .findOne({ id: id });
-        
-    movie 
-     ? response.send(movie) 
-     : response.status(404).send({ msg: "No such movie found" });
-});
-
-// express.json() -> converting to JSON
-// Inbuilt middleware
-
-app.post("/movies", async function (request, response) {
-    const data = request.body;
-    console.log(data);
-    // db.movies.insertMany(data)
-    const result = await client.db("b33wd").collection("movies").insertMany(data);
-    response.send(result);
-});
-
-app.delete("/movies/:id", async function (request, response) {
-    console.log(request.params);
-    // params - parameters
-    const { id } = request.params;
-    // db.movies.deleteOne({id: '102'})
-        
-    const movie = await client
-       .db("b33wd")
-       .collection("movies")
-       .deleteOne({ id });
-        
-    movie.deletedCount > 0
-     ? response.send(movie) 
-     : response.status(404).send({ msg: "No such movie found" });
-});
-
-app.put("/movies/:id", async function (request, response) {
-    const data = request.body;    
-    console.log(data);
-    const { id } = request.params;
-    // db.movies.updateOne({id: id}, {$set: data})
-
-    const result = await client
-      .db("b33wd")
-      .collection("movies")
-      .updateOne({id}, {$set: data});
-    response.send(result);
-});
+app.use("/users", usersRouter);
 
 app.listen(PORT, () => console.log(`App started in ${PORT}`));
