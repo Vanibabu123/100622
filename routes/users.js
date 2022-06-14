@@ -16,7 +16,7 @@ function auth(req, res, next) {
   }
   
 // /users
-router.get("/", auth, async function (request, response) {
+router.get("/", async function (request, response) {
     //db.users.find({})
     
     // Cursor - pagination
